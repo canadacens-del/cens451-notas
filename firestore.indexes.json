@@ -1,0 +1,63 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "notas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "divisionId", "order": "ASCENDING" },
+        { "fieldPath": "materiaId",  "order": "ASCENDING" },
+        { "fieldPath": "ciclo",      "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "notas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "alumnoId", "order": "ASCENDING" },
+        { "fieldPath": "ciclo",    "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "notas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "divisionId", "order": "ASCENDING" },
+        { "fieldPath": "ciclo",      "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "notas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "docenteUid", "order": "ASCENDING" },
+        { "fieldPath": "ciclo",      "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "divisiones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "modalidadId", "order": "ASCENDING" },
+        { "fieldPath": "nombre",      "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "materias",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "modalidadId", "order": "ASCENDING" },
+        { "fieldPath": "anio",        "order": "ASCENDING" },
+        { "fieldPath": "nombre",      "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "alumnos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "divisionId", "order": "ASCENDING" },
+        { "fieldPath": "apellido",   "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: obtener rol del usuario autenticado
+    function rol() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol;
+    }
+
+    function esAdmin()     { return rol() == 'admin'; }
+    function esDirectivo() { return rol() == 'directivo'; }
+    function esDocente()   { return rol() == 'docente'; }
+    function esPreceptor() { return rol() == 'preceptor'; }
+
+    // Usuarios: solo admins pueden crear/editar; cada uno puede leer el suyo
+    match /usuarios/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || esAdmin());
+      allow write: if request.auth != null && esAdmin();
+    }
+
+    // Modalidades, Divisiones, Materias: lectura para todos autenticados, escritura solo admin
+    match /modalidades/{id} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && esAdmin();
+    }
+    match /divisiones/{id} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && esAdmin();
+    }
+    match /materias/{id} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && esAdmin();
+    }
+
+    // Alumnos: lectura para todos autenticados, escritura admin
+    match /alumnos/{id} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && esAdmin();
+    }
+
+    // Notas: docente solo escribe las suyas; todos los roles pueden leer
+    match /notas/{id} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null &&
+        (esAdmin() || (esDocente() && request.resource.data.docenteUid == request.auth.uid));
+      allow delete: if request.auth != null && esAdmin();
+    }
+  }
+}
