@@ -35,7 +35,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter basename="/cens-notas">
+      <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>
     </AuthProvider>
