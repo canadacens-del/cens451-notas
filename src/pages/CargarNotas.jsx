@@ -43,8 +43,15 @@ export default function CargarNotas() {
   const [expandido, setExpandido] = useState(null)
 
   useEffect(() => {
+    if (!perfil) return
     getDivisiones().then(divs => {
-      setDivisiones(perfil?.rol === 'admin' ? divs : divs.filter(d => perfil?.divisiones?.includes(d.id)))
+      if (perfil.rol === 'admin') {
+        setDivisiones(divs)
+      } else {
+        // Solo las divisiones donde tiene al menos una asignación
+        const divIds = [...new Set((perfil.asignaciones || []).map(a => a.divisionId))]
+        setDivisiones(divs.filter(d => divIds.includes(d.id)))
+      }
     })
   }, [perfil])
 
@@ -52,7 +59,15 @@ export default function CargarNotas() {
     if (!divisionId) { setMaterias([]); return }
     const div = divisiones.find(d => d.id === divisionId)
     getMaterias(div?.modalidadId).then(mats => {
-      setMaterias(perfil?.rol === 'admin' ? mats : mats.filter(m => perfil?.materias?.includes(m.id)))
+      if (perfil?.rol === 'admin') {
+        setMaterias(mats)
+      } else {
+        // Solo las materias asignadas para esta división en particular
+        const matIds = (perfil?.asignaciones || [])
+          .filter(a => a.divisionId === divisionId)
+          .map(a => a.materiaId)
+        setMaterias(mats.filter(m => matIds.includes(m.id)))
+      }
     })
   }, [divisionId, divisiones, perfil])
 
