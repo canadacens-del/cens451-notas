@@ -58,8 +58,8 @@ export default function AdminEstructura() {
   const [fUEdit, setFUEdit] = useState({ id:null, nombre:'', rol:'docente' })
 
   const [docenteSelec, setDocenteSelec] = useState(null)
-  const [asigDivs, setAsigDivs] = useState([])
-  const [asigMats, setAsigMats] = useState([])
+  const [asignaciones, setAsignaciones] = useState([])   // [{ materiaId, divisionId }]
+  const [asigDivFiltro, setAsigDivFiltro] = useState('') // división seleccionada en el panel
   const [asigSaved, setAsigSaved] = useState(false)
 
   useEffect(() => { loadAll() }, [])
@@ -97,23 +97,28 @@ export default function AdminEstructura() {
 
   function abrirAsignacion(docente) {
     setDocenteSelec(docente)
-    setAsigDivs(docente.divisiones || [])
-    setAsigMats(docente.materias || [])
+    setAsignaciones(docente.asignaciones || [])
+    setAsigDivFiltro('')
     setAsigSaved(false)
     setModal('asignacion')
   }
 
-  function toggleArr(arr, setArr, id) {
-    setArr(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  function toggleAsignacion(materiaId, divisionId) {
+    setAsignaciones(prev => {
+      const existe = prev.some(a => a.materiaId === materiaId && a.divisionId === divisionId)
+      if (existe) return prev.filter(a => !(a.materiaId === materiaId && a.divisionId === divisionId))
+      return [...prev, { materiaId, divisionId }]
+    })
     setAsigSaved(false)
   }
 
   async function guardarAsignacion() {
     setSaving(true)
-    await setUsuario(docenteSelec.id, { divisiones:asigDivs, materias:asigMats })
+    // Guardar nueva estructura y limpiar campos viejos
+    await setUsuario(docenteSelec.id, { asignaciones, divisiones: [], materias: [] })
     setAsigSaved(true)
     const us = await getUsuarios()
-    setData(prev => ({ ...prev, usuarios:us }))
+    setData(prev => ({ ...prev, usuarios: us }))
     setSaving(false)
     setTimeout(() => setAsigSaved(false), 3000)
   }
@@ -209,7 +214,7 @@ export default function AdminEstructura() {
           {data.usuarios.length > 0 ? (
             <div style={{ overflowX:'auto' }}>
               <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                <thead><tr>{['Nombre','Email','Rol','Divs.','Mats.','Acciones'].map((h,i) => <th key={i} style={TH}>{h}</th>)}</tr></thead>
+                <thead><tr>{['Nombre','Email','Rol','Asignaciones','Acciones'].map((h,i) => <th key={i} style={TH}>{h}</th>)}</tr></thead>
                 <tbody>
                   {data.usuarios.map(u => (
                     <tr key={u.id}>
@@ -221,8 +226,14 @@ export default function AdminEstructura() {
                           color: u.rol==='admin'?'#15803d': u.rol==='directivo'?'#92400e': u.rol==='docente'?'#1d4ed8':'#6b7280',
                         }}>{u.rol}</span>
                       </td>
-                      <td style={{ ...TD, color:'var(--color-text-secondary)', fontSize:12 }}>{u.divisiones?.length||<span style={{color:'#d1d5db'}}>—</span>}</td>
-                      <td style={{ ...TD, color:'var(--color-text-secondary)', fontSize:12 }}>{u.materias?.length||<span style={{color:'#d1d5db'}}>—</span>}</td>
+                      <td style={{ ...TD, color:'var(--color-text-secondary)', fontSize:12 }}>
+                        {u.rol === 'docente'
+                          ? (u.asignaciones?.length
+                              ? <span style={{ color:'#1d4ed8', fontWeight:500 }}>{u.asignaciones.length} par{u.asignaciones.length !== 1 ? 'es' : ''}</span>
+                              : <span style={{ color:'#d1d5db' }}>Sin asignar</span>)
+                          : <span style={{ color:'#d1d5db' }}>—</span>
+                        }
+                      </td>
                       <td style={TD}>
                         <button onClick={() => abrirEditUsuario(u)} style={{ ...actionBtn, color:'#2563eb', border:'0.5px solid #bfdbfe' }}>Editar</button>
                         {u.rol === 'docente' && (
@@ -419,61 +430,105 @@ export default function AdminEstructura() {
         </Modal>
       )}
 
-      {modal === 'asignacion' && docenteSelec && (
-        <Modal title="Asignar materias y divisiones" onClose={() => setModal(null)}>
-          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16, padding:'10px 12px', background:'var(--color-background-secondary)', borderRadius:8 }}>
-            <div style={{ width:36, height:36, borderRadius:'50%', background:'#dbeafe', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:500, color:'#1d4ed8', flexShrink:0 }}>
-              {(docenteSelec.nombre||'D').charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <div style={{ fontSize:14, fontWeight:500, color:'var(--color-text-primary)' }}>{docenteSelec.nombre}</div>
-              <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>{docenteSelec.email}</div>
-            </div>
-          </div>
+      {modal === 'asignacion' && docenteSelec && (() => {
+        // Materias filtradas por la división seleccionada en el panel
+        const divSelec = data.divisiones.find(d => d.id === asigDivFiltro)
+        const materiasFiltradas = divSelec
+          ? data.materias.filter(m => m.modalidadId === divSelec.modalidadId && m.anio === divSelec.anio)
+          : []
 
-          <div style={{ marginBottom:16 }}>
-            <div style={sectionLabel}>Divisiones a cargo</div>
-            {data.divisiones.length === 0
-              ? <p style={{ fontSize:12, color:'var(--color-text-secondary)' }}>No hay divisiones cargadas aún. Creá divisiones primero desde la pestaña Divisiones.</p>
-              : <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
-                  {data.divisiones.map(d => {
-                    const on = asigDivs.includes(d.id)
+        return (
+          <Modal title="Asignar materias y divisiones" onClose={() => setModal(null)}>
+            {/* Cabecera docente */}
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16, padding:'10px 12px', background:'var(--color-background-secondary)', borderRadius:8 }}>
+              <div style={{ width:36, height:36, borderRadius:'50%', background:'#dbeafe', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:500, color:'#1d4ed8', flexShrink:0 }}>
+                {(docenteSelec.nombre||'D').charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontSize:14, fontWeight:500, color:'var(--color-text-primary)' }}>{docenteSelec.nombre}</div>
+                <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>{docenteSelec.email}</div>
+              </div>
+            </div>
+
+            {/* Paso 1: elegir división */}
+            <div style={{ marginBottom:14 }}>
+              <div style={sectionLabel}>1. Elegí una división</div>
+              {data.divisiones.length === 0
+                ? <p style={{ fontSize:12, color:'var(--color-text-secondary)' }}>No hay divisiones cargadas aún.</p>
+                : <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+                    {data.divisiones.map(d => {
+                      const on = asigDivFiltro === d.id
+                      const cantMats = asignaciones.filter(a => a.divisionId === d.id).length
+                      return (
+                        <div key={d.id} onClick={() => setAsigDivFiltro(on ? '' : d.id)} style={chip(on)}>
+                          <div style={checkBox(on)}>{on && <span style={{ color:'white', fontSize:10, fontWeight:700 }}>✓</span>}</div>
+                          <span style={chipLabel(on)}>{d.nombre}</span>
+                          {cantMats > 0 && (
+                            <span style={{ marginLeft:'auto', fontSize:10, fontWeight:600, background:'#dbeafe', color:'#1d4ed8', borderRadius:10, padding:'1px 6px' }}>
+                              {cantMats}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+              }
+            </div>
+
+            {/* Paso 2: materias de esa división */}
+            <div style={{ marginBottom:4, minHeight:80 }}>
+              <div style={sectionLabel}>2. Marcá las materias que dicta en esa división</div>
+              {!asigDivFiltro
+                ? <p style={{ fontSize:12, color:'var(--color-text-secondary)', fontStyle:'italic' }}>Primero seleccioná una división arriba.</p>
+                : materiasFiltradas.length === 0
+                  ? <p style={{ fontSize:12, color:'var(--color-text-secondary)' }}>No hay materias para esta división (modalidad/año).</p>
+                  : <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+                      {materiasFiltradas.map(m => {
+                        const on = asignaciones.some(a => a.materiaId === m.id && a.divisionId === asigDivFiltro)
+                        return (
+                          <div key={m.id} onClick={() => toggleAsignacion(m.id, asigDivFiltro)} style={chip(on)}>
+                            <div style={checkBox(on)}>{on && <span style={{ color:'white', fontSize:10, fontWeight:700 }}>✓</span>}</div>
+                            <span style={chipLabel(on)}>{m.nombre}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+              }
+            </div>
+
+            {/* Resumen de asignaciones actuales */}
+            {asignaciones.length > 0 && (
+              <div style={{ marginTop:14, padding:'10px 12px', background:'#f0fdf4', borderRadius:8, border:'0.5px solid #bbf7d0' }}>
+                <div style={{ ...sectionLabel, color:'#15803d', marginBottom:6 }}>Asignaciones guardadas ({asignaciones.length})</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                  {asignaciones.map((a, i) => {
+                    const mat = data.materias.find(m => m.id === a.materiaId)
+                    const div = data.divisiones.find(d => d.id === a.divisionId)
                     return (
-                      <div key={d.id} onClick={() => toggleArr(asigDivs, setAsigDivs, d.id)} style={chip(on)}>
-                        <div style={checkBox(on)}>{on && <span style={{ color:'white', fontSize:10, fontWeight:700 }}>✓</span>}</div>
-                        <span style={chipLabel(on)}>{d.nombre}</span>
+                      <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:12 }}>
+                        <span style={{ color:'#166534' }}>
+                          <strong>{mat?.nombre || a.materiaId}</strong> — {div?.nombre || a.divisionId}
+                        </span>
+                        <button
+                          onClick={() => toggleAsignacion(a.materiaId, a.divisionId)}
+                          style={{ fontSize:11, color:'#dc2626', background:'none', border:'none', cursor:'pointer', padding:'0 4px' }}>
+                          ✕
+                        </button>
                       </div>
                     )
                   })}
                 </div>
-            }
-          </div>
+              </div>
+            )}
 
-          <div style={{ marginBottom:4 }}>
-            <div style={sectionLabel}>Materias que dicta</div>
-            {data.materias.length === 0
-              ? <p style={{ fontSize:12, color:'var(--color-text-secondary)' }}>No hay materias cargadas aún. Creá materias primero desde la pestaña Materias.</p>
-              : <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
-                  {data.materias.map(m => {
-                    const on = asigMats.includes(m.id)
-                    return (
-                      <div key={m.id} onClick={() => toggleArr(asigMats, setAsigMats, m.id)} style={chip(on)}>
-                        <div style={checkBox(on)}>{on && <span style={{ color:'white', fontSize:10, fontWeight:700 }}>✓</span>}</div>
-                        <span style={chipLabel(on)}>{m.nombre}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-            }
-          </div>
-
-          <div style={{ display:'flex', justifyContent:'flex-end', alignItems:'center', gap:10, marginTop:16, paddingTop:14, borderTop:'0.5px solid var(--color-border-tertiary)' }}>
-            {asigSaved && <span style={{ fontSize:12, color:'#15803d' }}>✓ Guardado</span>}
-            <Btn variant="secondary" onClick={() => setModal(null)}>Cancelar</Btn>
-            <Btn onClick={guardarAsignacion} disabled={saving}>{saving ? 'Guardando...' : 'Guardar asignación'}</Btn>
-          </div>
-        </Modal>
-      )}
+            <div style={{ display:'flex', justifyContent:'flex-end', alignItems:'center', gap:10, marginTop:16, paddingTop:14, borderTop:'0.5px solid var(--color-border-tertiary)' }}>
+              {asigSaved && <span style={{ fontSize:12, color:'#15803d' }}>✓ Guardado</span>}
+              <Btn variant="secondary" onClick={() => setModal(null)}>Cancelar</Btn>
+              <Btn onClick={guardarAsignacion} disabled={saving}>{saving ? 'Guardando...' : 'Guardar asignación'}</Btn>
+            </div>
+          </Modal>
+        )
+      })()}
     </div>
   )
 }
