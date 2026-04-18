@@ -2,7 +2,7 @@
 import { getFirestore } from 'firebase/firestore'
 import { getAuth } from 'firebase/auth'
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyBxwR3zK2LY_5eaik723evhiKmbn2diqYk",
   authDomain: "cens451-notas.firebaseapp.com",
   projectId: "cens451-notas",
