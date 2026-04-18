@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { createUserWithEmailAndPassword } from 'firebase/auth'
-import { auth } from '../firebase/config'
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth'
+import { initializeApp } from 'firebase/app'
+import { firebaseConfig } from '../firebase/config'
 import {
   getUsuarios, setUsuario, getDivisiones, setDivision, deleteDivision,
   getMaterias, setMateria, deleteMateria, getModalidades, setModalidad,
@@ -75,8 +76,12 @@ export default function AdminEstructura() {
   async function crearUsuario() {
     setSaving(true); setError('')
     try {
-      const cred = await createUserWithEmailAndPassword(auth, fU.email, fU.password)
+      // App secundaria temporal para no cerrar la sesión del admin
+      const secondaryApp = initializeApp(firebaseConfig, `secondary_${Date.now()}`)
+      const secondaryAuth = getAuth(secondaryApp)
+      const cred = await createUserWithEmailAndPassword(secondaryAuth, fU.email, fU.password)
       await setUsuario(cred.user.uid, { email:fU.email, nombre:fU.nombre, rol:fU.rol, asignaciones:[] })
+      await secondaryApp.delete()
       setModal(null); setFU({ email:'', password:'', nombre:'', rol:'docente' })
       await loadAll()
     } catch(e) { setError(e.message) }
