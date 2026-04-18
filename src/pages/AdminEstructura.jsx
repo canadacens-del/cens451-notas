@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth'
-import { initializeApp } from 'firebase/app'
+import { initializeApp, deleteApp } from 'firebase/app'
 import { firebaseConfig } from '../firebase/config'
 import {
   getUsuarios, setUsuario, getDivisiones, setDivision, deleteDivision,
@@ -81,7 +81,7 @@ export default function AdminEstructura() {
       const secondaryAuth = getAuth(secondaryApp)
       const cred = await createUserWithEmailAndPassword(secondaryAuth, fU.email, fU.password)
       await setUsuario(cred.user.uid, { email:fU.email, nombre:fU.nombre, rol:fU.rol, asignaciones:[] })
-      await secondaryApp.delete()
+      await deleteApp(secondaryApp)
       setModal(null); setFU({ email:'', password:'', nombre:'', rol:'docente' })
       await loadAll()
     } catch(e) { setError(e.message) }
@@ -235,7 +235,7 @@ export default function AdminEstructura() {
                       </td>
                       <td style={TD}>
                         <button onClick={() => abrirEditUsuario(u)} style={{ ...actionBtn, color:'#2563eb', border:'0.5px solid #bfdbfe' }}>Editar</button>
-                        {u.rol === 'docente' && (
+                        {(u.rol === 'docente' || u.rol === 'preceptor') && (
                           <button onClick={() => abrirAsignacion(u)} style={{ ...actionBtn, color:'#7c3aed', border:'0.5px solid #ddd6fe' }}>Asignar</button>
                         )}
                       </td>
