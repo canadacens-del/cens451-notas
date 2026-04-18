@@ -14,7 +14,7 @@ export default function Sidebar() {
     { to:'/cargar', label:'Cargar notas', icon:'✎', roles:['admin','docente'] },
     { to:'/consultar', label:'Consultar notas', icon:'◎' },
     { to:'/informes', label:'Informes', icon:'▤', roles:['admin','directivo'] },
-    { to:'/admin/estructura', label:'Administración', icon:'⚙', roles:['admin'] },
+    { to:'/admin/estructura', label:'Administración', icon:'⚙', roles:['admin','directivo','preceptor'] },
   ].filter(l => !l.roles || l.roles.includes(perfil?.rol))
 
   const navContent = (
